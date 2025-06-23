@@ -9,9 +9,10 @@ const FeistelCipher = () => {
   const [steps, setSteps] = useState([]);
   const [currentStep, setCurrentStep] = useState(0);
   const [showSteps, setShowSteps] = useState(false);
-  const [mode, setMode] = useState('encrypt'); // 'encrypt' or 'decrypt'
+  const [mode, setMode] = useState('encrypt');
 
-  const xorStrings = (a, b) => {
+  // Mixes two strings using XOR operation
+  const mixStrings = (a, b) => {
     let result = '';
     const len = Math.min(a.length, b.length);
     for (let i = 0; i < len; i++) {
@@ -20,53 +21,56 @@ const FeistelCipher = () => {
     return result;
   };
 
-  const roundFunction = (text, key) => xorStrings(text, key);
-
   const encrypt = () => {
     let text = plaintext;
-    if (text.length % 2 !== 0) text += ' ';
+    if (text.length % 2 !== 0) text += ' '; // Add space if odd length
 
     const encryptionSteps = [];
     let left = text.substring(0, text.length / 2);
     let right = text.substring(text.length / 2);
 
+    // Step 0: Initial split
     encryptionSteps.push({
       step: 0,
       left,
       right,
-      operation: 'Initial split',
+      description: `We start by splitting "${text}" into two equal parts`,
+      operation: 'Initial Split',
       roundKey: '',
-      fResult: ''
+      mixResult: ''
     });
 
     for (let i = 0; i < rounds; i++) {
       const roundKey = key;
-      const fResult = roundFunction(right, roundKey);
+      const mixResult = mixStrings(right, roundKey);
       const newLeft = right;
-      const newRight = xorStrings(left, fResult);
+      const newRight = mixStrings(left, mixResult);
 
       encryptionSteps.push({
         step: i + 1,
         left: newLeft,
         right: newRight,
+        description: `Round ${i + 1}: We mix the Right part with the Key, then combine with Left`,
         operation: `Round ${i + 1}`,
         roundKey,
-        fResult
+        mixResult,
+        action: `Mixed Right with Key → Combined with Left → Swapped sides`
       });
 
       left = newLeft;
       right = newRight;
     }
 
+    // Final swap
     const finalCiphertext = right + left;
     encryptionSteps.push({
       step: rounds + 1,
       left: right,
       right: left,
-      operation: 'Final swap',
-      roundKey: '',
-      fResult: '',
-      ciphertext: finalCiphertext
+      description: `After all rounds, we swap the two parts one final time`,
+      operation: 'Final Swap',
+      ciphertext: finalCiphertext,
+      action: `Swapped Left and Right to get final ciphertext`
     });
 
     setCiphertext(finalCiphertext);
@@ -80,46 +84,51 @@ const FeistelCipher = () => {
     if (text.length % 2 !== 0) text += ' ';
 
     const decryptionSteps = [];
-    let right = text.substring(0, text.length / 2); // reverse of final swap
+    let right = text.substring(0, text.length / 2);
     let left = text.substring(text.length / 2);
 
+    // Step 0: Initial split
     decryptionSteps.push({
       step: 0,
       left,
       right,
-      operation: 'Initial split (from ciphertext)',
+      description: `We start by splitting the ciphertext into two parts`,
+      operation: 'Initial Split',
       roundKey: '',
-      fResult: ''
+      mixResult: ''
     });
 
     for (let i = 0; i < rounds; i++) {
       const roundKey = key;
-      const fResult = roundFunction(left, roundKey);
+      const mixResult = mixStrings(left, roundKey);
       const newRight = left;
-      const newLeft = xorStrings(right, fResult);
+      const newLeft = mixStrings(right, mixResult);
 
       decryptionSteps.push({
         step: i + 1,
         left: newLeft,
         right: newRight,
+        description: `Round ${i + 1}: We mix the Left part with the Key, then combine with Right`,
         operation: `Round ${i + 1}`,
         roundKey,
-        fResult
+        mixResult,
+        action: `Mixed Left with Key → Combined with Right → Swapped sides`
       });
 
       right = newRight;
       left = newLeft;
     }
 
+    // Final swap
     const finalPlaintext = left + right;
     decryptionSteps.push({
       step: rounds + 1,
       left,
       right,
-      operation: 'Final swap (to get plaintext)',
-      roundKey: '',
-      fResult: '',
-      ciphertext: finalPlaintext
+      description: `After all rounds, we combine the parts to get the original message`,
+      operation: 'Final Combine',
+      ciphertext: finalPlaintext,
+      action: `Combined Left and Right to get original message`
     });
 
     setPlaintext(finalPlaintext);
@@ -140,35 +149,25 @@ const FeistelCipher = () => {
     <div className="feistel-container">
       <div className="feistel-header">
         <h1>Feistel Cipher Interactive Demo</h1>
-        <p>Visualize Feistel {mode === 'encrypt' ? 'encryption' : 'decryption'} step-by-step.</p>
+        <p>See step-by-step how messages are encrypted and decrypted</p>
       </div>
 
       <div className="feistel-controls">
         <div className="form-group">
-          <label>Plaintext</label>
+          <label>{mode === 'encrypt' ? 'Message to Encrypt' : 'Ciphertext to Decrypt'}</label>
           <input
-            value={plaintext}
-            onChange={(e) => setPlaintext(e.target.value)}
-            disabled={mode === 'decrypt'}
+            value={mode === 'encrypt' ? plaintext : ciphertext}
+            onChange={(e) => mode === 'encrypt' ? setPlaintext(e.target.value) : setCiphertext(e.target.value)}
           />
         </div>
 
         <div className="form-group">
-          <label>Ciphertext</label>
-          <input
-            value={ciphertext}
-            onChange={(e) => setCiphertext(e.target.value)}
-            disabled={mode === 'encrypt'}
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Key</label>
+          <label>Secret Key</label>
           <input value={key} onChange={(e) => setKey(e.target.value)} />
         </div>
 
         <div className="form-group">
-          <label>Rounds: {rounds}</label>
+          <label>Number of Rounds: {rounds}</label>
           <input
             type="range"
             min="1"
@@ -179,18 +178,16 @@ const FeistelCipher = () => {
         </div>
 
         <div className="form-group">
-          <label>Mode</label>
+          <label>Action</label>
           <select value={mode} onChange={(e) => setMode(e.target.value)}>
-            <option value="encrypt">Encrypt</option>
-            <option value="decrypt">Decrypt</option>
+            <option value="encrypt">Encrypt Message</option>
+            <option value="decrypt">Decrypt Message</option>
           </select>
         </div>
 
-        <div className="form-group">
-          <button onClick={handleProcess}>
-            {mode === 'encrypt' ? 'Encrypt Now' : 'Decrypt Now'}
-          </button>
-        </div>
+        <button className="process-button" onClick={handleProcess}>
+          {mode === 'encrypt' ? 'Encrypt Now' : 'Decrypt Now'}
+        </button>
       </div>
 
       {showSteps && (
@@ -198,33 +195,40 @@ const FeistelCipher = () => {
           <h2>
             Step {currentStep + 1}: {steps[currentStep].operation}
           </h2>
+          
+          <div className="step-description">
+            <p>{steps[currentStep].description}</p>
+            {steps[currentStep].action && <p className="action">{steps[currentStep].action}</p>}
+          </div>
 
           <div className="block-display">
             <div className="block left">
-              L{steps[currentStep].step}: {steps[currentStep].left}
+              <div className="block-label">Left Part</div>
+              <div className="block-value">"{steps[currentStep].left}"</div>
             </div>
             <div className="block right">
-              R{steps[currentStep].step}: {steps[currentStep].right}
+              <div className="block-label">Right Part</div>
+              <div className="block-value">"{steps[currentStep].right}"</div>
             </div>
           </div>
 
           {steps[currentStep].roundKey && (
-            <p>
-              <strong>Round Key:</strong> {steps[currentStep].roundKey}
-            </p>
+            <div className="step-detail">
+              <strong>Key Used:</strong> "{steps[currentStep].roundKey}"
+            </div>
           )}
 
-          {steps[currentStep].fResult && (
-            <p>
-              <strong>F(R, K):</strong> {steps[currentStep].fResult}
-            </p>
+          {steps[currentStep].mixResult && (
+            <div className="step-detail">
+              <strong>Mixed Result:</strong> "{steps[currentStep].mixResult}"
+            </div>
           )}
 
           {steps[currentStep].ciphertext && (
-            <p>
-              <strong>Final {mode === 'encrypt' ? 'Ciphertext' : 'Plaintext'}:</strong>{' '}
-              {steps[currentStep].ciphertext}
-            </p>
+            <div className="final-result">
+              <strong>Final {mode === 'encrypt' ? 'Encrypted Message' : 'Decrypted Message'}:</strong>
+              <div className="result-value">"{steps[currentStep].ciphertext}"</div>
+            </div>
           )}
 
           <div className="step-navigation">
@@ -232,13 +236,13 @@ const FeistelCipher = () => {
               onClick={() => setCurrentStep((prev) => Math.max(0, prev - 1))}
               disabled={currentStep === 0}
             >
-              Previous
+              ◀ Previous Step
             </button>
             <button
               onClick={() => setCurrentStep((prev) => Math.min(steps.length - 1, prev + 1))}
               disabled={currentStep === steps.length - 1}
             >
-              Next
+              Next Step ▶
             </button>
           </div>
         </div>
