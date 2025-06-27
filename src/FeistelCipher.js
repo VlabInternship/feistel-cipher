@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lock, Unlock, RotateCcw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const FeistelCipher = () => {
   const [plaintext, setPlaintext] = useState('Hello123');
@@ -8,6 +9,9 @@ const FeistelCipher = () => {
   const [encryptionResult, setEncryptionResult] = useState(null);
   const [decryptionResult, setDecryptionResult] = useState(null);
   const [ciphertext, setCiphertext] = useState('');
+  const [activeRound, setActiveRound] = useState(0);
+  const [animationStep, setAnimationStep] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   // Convert string to binary
   const stringToBinary = (str) => {
@@ -26,15 +30,17 @@ const FeistelCipher = () => {
     return chars.join('');
   };
 
-  // Simple F-function (XOR with key)
+  // Improved F-function with more complex operations
   const fFunction = (right, roundKey) => {
     const keyBinary = stringToBinary(roundKey);
     let result = '';
     
-    // XOR with key (repeat key if needed)
+    // More complex mixing of bits
     for (let i = 0; i < right.length; i++) {
       const keyBit = keyBinary[i % keyBinary.length];
-      result += (parseInt(right[i]) ^ parseInt(keyBit)).toString();
+      // XOR with key bit and also mix with position
+      const mixedBit = (parseInt(right[i]) ^ parseInt(keyBit)) ^ (i % 2);
+      result += mixedBit.toString();
     }
     
     return result;
@@ -49,9 +55,11 @@ const FeistelCipher = () => {
     return result;
   };
 
-  // Generate round key
+  // Improved round key generation with more variation
   const generateRoundKey = (baseKey, round) => {
-    return baseKey + round.toString();
+    // Create more variation between rounds by rotating the key
+    const rotateAmount = round % baseKey.length;
+    return baseKey.slice(rotateAmount) + baseKey.slice(0, rotateAmount) + round.toString();
   };
 
   // Feistel encryption
@@ -66,7 +74,7 @@ const FeistelCipher = () => {
       data: {
         plaintext: plaintext,
         binary: binary,
-        formatted: binary.match(/.{8}/g).join(' ')
+        formatted: binary.match(/.{8}/g)?.join(' ') || binary
       }
     });
 
@@ -125,7 +133,7 @@ const FeistelCipher = () => {
         finalRight: right,
         cipherBinary: cipherBinary,
         ciphertext: ciphertext,
-        formattedBinary: cipherBinary.match(/.{8}/g).join(' ')
+        formattedBinary: cipherBinary.match(/.{8}/g)?.join(' ') || cipherBinary
       }
     });
 
@@ -143,7 +151,7 @@ const FeistelCipher = () => {
       data: {
         ciphertext: ciphertext,
         binary: binary,
-        formatted: binary.match(/.{8}/g).join(' ')
+        formatted: binary.match(/.{8}/g)?.join(' ') || binary
       }
     });
 
@@ -198,7 +206,7 @@ const FeistelCipher = () => {
         finalRight: right,
         decryptedBinary: decryptedBinary,
         decryptedText: decryptedText,
-        formattedBinary: decryptedBinary.match(/.{8}/g).join(' ')
+        formattedBinary: decryptedBinary.match(/.{8}/g)?.join(' ') || decryptedBinary
       }
     });
 
@@ -212,6 +220,38 @@ const FeistelCipher = () => {
     setEncryptionResult(encryptResult);
     setCiphertext(encryptResult.ciphertext);
     setDecryptionResult(null);
+    setActiveRound(0);
+    setAnimationStep(0);
+    setIsAnimating(true);
+    
+    // Start animation sequence
+    animateEncryptionProcess();
+  };
+
+  const animateEncryptionProcess = () => {
+    const totalRounds = rounds;
+    const stepsPerRound = 4; // Split, F-function, XOR, Swap
+    
+    let stepCounter = 0;
+    
+    const animate = () => {
+      if (stepCounter >= totalRounds * stepsPerRound) {
+        // Animation complete
+        setIsAnimating(false);
+        return;
+      }
+      
+      const currentRound = Math.floor(stepCounter / stepsPerRound);
+      const currentStep = stepCounter % stepsPerRound;
+      
+      setActiveRound(currentRound);
+      setAnimationStep(currentStep + 1); // Steps start at 1
+      
+      stepCounter++;
+      setTimeout(animate, 1500); // Delay between steps
+    };
+    
+    animate();
   };
 
   const handleDecrypt = () => {
@@ -219,12 +259,508 @@ const FeistelCipher = () => {
     
     const decryptResult = feistelDecrypt(ciphertext, key, rounds);
     setDecryptionResult(decryptResult);
+    setActiveRound(0);
+    setAnimationStep(0);
+    setIsAnimating(true);
+    
+    // Start animation sequence
+    animateDecryptionProcess();
+  };
+
+  const animateDecryptionProcess = () => {
+    const totalRounds = rounds;
+    const stepsPerRound = 4; // Split, F-function, XOR, Swap
+    
+    let stepCounter = 0;
+    
+    const animate = () => {
+      if (stepCounter >= totalRounds * stepsPerRound) {
+        // Animation complete
+        setIsAnimating(false);
+        return;
+      }
+      
+      const currentRound = Math.floor(stepCounter / stepsPerRound);
+      const currentStep = stepCounter % stepsPerRound;
+      
+      setActiveRound(currentRound);
+      setAnimationStep(currentStep + 1); // Steps start at 1
+      
+      stepCounter++;
+      setTimeout(animate, 1500); // Delay between steps
+    };
+    
+    animate();
   };
 
   const reset = () => {
     setEncryptionResult(null);
     setDecryptionResult(null);
     setCiphertext('');
+    setActiveRound(0);
+    setAnimationStep(0);
+    setIsAnimating(false);
+  };
+
+  const renderEncryptionAnimation = () => {
+    if (!encryptionResult) return null;
+    
+    const { steps } = encryptionResult;
+    const splitStep = steps.find(step => step.type === 'split');
+    const roundSteps = steps.filter(step => step.type === 'round');
+    
+    return (
+      <div className="animation-container">
+        <div className="feistel-diagram">
+          {/* Initial Plaintext Block */}
+          <motion.div 
+            className="plaintext-block"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="block-label">Plaintext Block</div>
+            <div className="block-content">{plaintext}</div>
+            {animationStep >= 1 && (
+              <motion.div 
+                className="animation-arrow down"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                ↓
+              </motion.div>
+            )}
+          </motion.div>
+
+          {/* Split into L0 and R0 */}
+          {animationStep >= 1 && (
+            <motion.div
+              className="split-blocks"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="blocks-row">
+                <div className="block left-block">
+                  <div className="block-label">L<sub>0</sub></div>
+                  <div className="block-content">{splitStep.data.L0}</div>
+                </div>
+                <div className="block right-block">
+                  <div className="block-label">R<sub>0</sub></div>
+                  <div className="block-content">{splitStep.data.R0}</div>
+                </div>
+              </div>
+              {animationStep >= 1 && activeRound === 0 && (
+                <motion.div 
+                  className="animation-arrow down"
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  ↓
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Round Animations */}
+          <AnimatePresence>
+            {roundSteps.map((round, index) => (
+              <React.Fragment key={`round-${index}`}>
+                {/* Show round only when active */}
+                {(activeRound >= index) && (
+                  <motion.div
+                    className="round-animation"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <div className="round-header">
+                      <h4>Round {index + 1}</h4>
+                      <div className="round-key">K<sub>{index + 1}</sub>: {round.data.roundKey}</div>
+                    </div>
+
+                    <div className="round-steps">
+                      {/* Show right block going to F function */}
+                      {animationStep >= 2 && activeRound === index && (
+                        <motion.div
+                          className="f-function-input"
+                          initial={{ x: 0 }}
+                          animate={{ x: [0, 50, 0] }}
+                          transition={{ duration: 1 }}
+                        >
+                          <div className="block right-block small">
+                            <div className="block-label">R<sub>{index}</sub></div>
+                            <div className="block-content">{round.data.fInput}</div>
+                          </div>
+                          <div className="animation-arrow right">→</div>
+                        </motion.div>
+                      )}
+
+                      {/* F Function */}
+                      {animationStep >= 2 && activeRound === index && (
+                        <motion.div
+                          className="f-function"
+                          initial={{ scale: 0.8 }}
+                          animate={{ scale: 1 }}
+                          transition={{ duration: 0.5 }}
+                        >
+                          <div className="f-label">F(K<sub>{index + 1}</sub>, R<sub>{index}</sub>)</div>
+                          <div className="f-output">{round.data.fOutput}</div>
+                          {animationStep >= 2 && activeRound === index && (
+                            <motion.div 
+                              className="animation-arrow down"
+                              initial={{ opacity: 0, y: -20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.5 }}
+                            >
+                              ↓
+                            </motion.div>
+                          )}
+                        </motion.div>
+                      )}
+
+                      {/* XOR Operation */}
+                      {animationStep >= 3 && activeRound === index && (
+                        <motion.div
+                          className="xor-operation"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.5 }}
+                        >
+                          <div className="block left-block small">
+                            <div className="block-label">L<sub>{index}</sub></div>
+                            <div className="block-content">{round.data.prevLeft}</div>
+                          </div>
+                          <div className="xor-symbol">⊕</div>
+                          <div className="f-output small">{round.data.fOutput}</div>
+                          <div className="animation-arrow right">→</div>
+                          <div className="xor-result">
+                            <div className="block-label">R<sub>{index + 1}</sub></div>
+                            <div className="block-content">{round.data.newRight}</div>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {/* Block Swap */}
+                      {animationStep >= 4 && activeRound === index && (
+                        <motion.div
+                          className="block-swap"
+                          initial={{ y: 0 }}
+                          animate={{ y: [0, -10, 0] }}
+                          transition={{ duration: 0.5 }}
+                        >
+                          <div className="blocks-row">
+                            <div className="block left-block">
+                              <div className="block-label">L<sub>{index + 1}</sub> = R<sub>{index}</sub></div>
+                              <div className="block-content">{round.data.newLeft}</div>
+                            </div>
+                            <div className="block right-block">
+                              <div className="block-label">R<sub>{index + 1}</sub></div>
+                              <div className="block-content">{round.data.newRight}</div>
+                            </div>
+                          </div>
+                          {(index < rounds - 1) && (
+                            <motion.div 
+                              className="animation-arrow down"
+                              initial={{ opacity: 0, y: -20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.5 }}
+                            >
+                              ↓
+                            </motion.div>
+                          )}
+                        </motion.div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </React.Fragment>
+            ))}
+          </AnimatePresence>
+
+          {/* Final Ciphertext */}
+          {activeRound >= rounds && (
+            <motion.div
+              className="final-blocks"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="blocks-row">
+                <div className="block cipher-block">
+                  <div className="block-label">L<sub>n</sub></div>
+                  <div className="block-content">{encryptionResult.finalLeft}</div>
+                </div>
+                <div className="block cipher-block">
+                  <div className="block-label">R<sub>n</sub></div>
+                  <div className="block-content">{encryptionResult.finalRight}</div>
+                </div>
+              </div>
+              <div className="animation-arrow down">↓</div>
+              <div className="ciphertext-output">
+                Ciphertext: {encryptionResult.ciphertext}
+              </div>
+            </motion.div>
+          )}
+        </div>
+
+        {/* Animation Controls */}
+        <div className="animation-controls">
+          <button 
+            className="btn control-btn"
+            onClick={() => setIsAnimating(!isAnimating)}
+            disabled={!encryptionResult}
+          >
+            {isAnimating ? 'Pause' : 'Play'} Animation
+          </button>
+          <button 
+            className="btn control-btn"
+            onClick={reset}
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderDecryptionAnimation = () => {
+    if (!decryptionResult) return null;
+    
+    const { steps } = decryptionResult;
+    const splitStep = steps.find(step => step.type === 'split');
+    const roundSteps = steps.filter(step => step.type === 'round');
+    
+    return (
+      <div className="animation-container">
+        <div className="feistel-diagram decrypt">
+          {/* Initial Ciphertext Block */}
+          <motion.div 
+            className="plaintext-block"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="block-label">Ciphertext Block</div>
+            <div className="block-content">{ciphertext}</div>
+            {animationStep >= 1 && (
+              <motion.div 
+                className="animation-arrow down"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                ↓
+              </motion.div>
+            )}
+          </motion.div>
+
+          {/* Split into L0 and R0 */}
+          {animationStep >= 1 && (
+            <motion.div
+              className="split-blocks"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="blocks-row">
+                <div className="block left-block">
+                  <div className="block-label">L<sub>0</sub></div>
+                  <div className="block-content">{splitStep.data.L0}</div>
+                </div>
+                <div className="block right-block">
+                  <div className="block-label">R<sub>0</sub></div>
+                  <div className="block-content">{splitStep.data.R0}</div>
+                </div>
+              </div>
+              {animationStep >= 1 && activeRound === 0 && (
+                <motion.div 
+                  className="animation-arrow down"
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  ↓
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Round Animations */}
+          <AnimatePresence>
+            {roundSteps.map((round, index) => (
+              <React.Fragment key={`decrypt-round-${index}`}>
+                {/* Show round only when active */}
+                {(activeRound >= index) && (
+                  <motion.div
+                    className="round-animation"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <div className="round-header">
+                      <h4>Round {index + 1} (K<sub>{rounds - index}</sub>)</h4>
+                      <div className="round-key">K<sub>{rounds - index}</sub>: {round.data.roundKey}</div>
+                    </div>
+
+                    <div className="round-steps">
+                      {/* Show left block going to F function */}
+                      {animationStep >= 2 && activeRound === index && (
+                        <motion.div
+                          className="f-function-input"
+                          initial={{ x: 0 }}
+                          animate={{ x: [0, 50, 0] }}
+                          transition={{ duration: 1 }}
+                        >
+                          <div className="block left-block small">
+                            <div className="block-label">L<sub>{index}</sub></div>
+                            <div className="block-content">{round.data.fInput}</div>
+                          </div>
+                          <div className="animation-arrow right">→</div>
+                        </motion.div>
+                      )}
+
+                      {/* F Function */}
+                      {animationStep >= 2 && activeRound === index && (
+                        <motion.div
+                          className="f-function"
+                          initial={{ scale: 0.8 }}
+                          animate={{ scale: 1 }}
+                          transition={{ duration: 0.5 }}
+                        >
+                          <div className="f-label">F(K<sub>{rounds - index}</sub>, L<sub>{index}</sub>)</div>
+                          <div className="f-output">{round.data.fOutput}</div>
+                          {animationStep >= 2 && activeRound === index && (
+                            <motion.div 
+                              className="animation-arrow down"
+                              initial={{ opacity: 0, y: -20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.5 }}
+                            >
+                              ↓
+                            </motion.div>
+                          )}
+                        </motion.div>
+                      )}
+
+                      {/* XOR Operation */}
+                      {animationStep >= 3 && activeRound === index && (
+                        <motion.div
+                          className="xor-operation"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.5 }}
+                        >
+                          <div className="block right-block small">
+                            <div className="block-label">R<sub>{index}</sub></div>
+                            <div className="block-content">{round.data.prevRight}</div>
+                          </div>
+                          <div className="xor-symbol">⊕</div>
+                          <div className="f-output small">{round.data.fOutput}</div>
+                          <div className="animation-arrow right">→</div>
+                          <div className="xor-result">
+                            <div className="block-label">L<sub>{index + 1}</sub></div>
+                            <div className="block-content">{round.data.newLeft}</div>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {/* Block Swap */}
+                      {animationStep >= 4 && activeRound === index && (
+                        <motion.div
+                          className="block-swap"
+                          initial={{ y: 0 }}
+                          animate={{ y: [0, -10, 0] }}
+                          transition={{ duration: 0.5 }}
+                        >
+                          <div className="blocks-row">
+                            <div className="block left-block">
+                              <div className="block-label">L<sub>{index + 1}</sub></div>
+                              <div className="block-content">{round.data.newLeft}</div>
+                            </div>
+                            <div className="block right-block">
+                              <div className="block-label">R<sub>{index + 1}</sub> = L<sub>{index}</sub></div>
+                              <div className="block-content">{round.data.newRight}</div>
+                            </div>
+                          </div>
+                          {(index < rounds - 1) && (
+                            <motion.div 
+                              className="animation-arrow down"
+                              initial={{ opacity: 0, y: -20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.5 }}
+                            >
+                              ↓
+                            </motion.div>
+                          )}
+                        </motion.div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </React.Fragment>
+            ))}
+          </AnimatePresence>
+
+          {/* Final Plaintext */}
+          {activeRound >= rounds && (
+            <motion.div
+              className="final-blocks"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="blocks-row">
+                <div className="block plaintext-block">
+                  <div className="block-label">L<sub>n</sub></div>
+                  <div className="block-content">{decryptionResult.finalLeft}</div>
+                </div>
+                <div className="block plaintext-block">
+                  <div className="block-label">R<sub>n</sub></div>
+                  <div className="block-content">{decryptionResult.finalRight}</div>
+                </div>
+              </div>
+              <div className="animation-arrow down">↓</div>
+              <div className="plaintext-output">
+                Decrypted Text: {decryptionResult.decryptedText}
+              </div>
+              <div className={`verification ${
+                decryptionResult.decryptedText === plaintext ? 'success' : 'error'
+              }`}>
+                {decryptionResult.decryptedText === plaintext ? '✅' : '❌'}
+                <span>
+                  {decryptionResult.decryptedText === plaintext 
+                    ? 'Success! Decrypted text matches original plaintext.' 
+                    : 'Error: Decrypted text does not match original plaintext.'
+                  }
+                </span>
+              </div>
+            </motion.div>
+          )}
+        </div>
+
+        {/* Animation Controls */}
+        <div className="animation-controls">
+          <button 
+            className="btn control-btn"
+            onClick={() => setIsAnimating(!isAnimating)}
+            disabled={!decryptionResult}
+          >
+            {isAnimating ? 'Pause' : 'Play'} Animation
+          </button>
+          <button 
+            className="btn control-btn"
+            onClick={reset}
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -233,6 +769,7 @@ const FeistelCipher = () => {
         {/* Header Card */}
         <div className="header-card">
           <h1>Feistel Cipher Implementation</h1>
+          <p>Educational cryptography tool with step-by-step visualization</p>
         </div>
 
         {/* Input Card */}
@@ -335,6 +872,10 @@ const FeistelCipher = () => {
                 </div>
               </div>
 
+              {/* Render the animation */}
+              {renderEncryptionAnimation()}
+
+              {/* Detailed Steps */}
               {encryptionResult.steps.map((step, index) => (
                 <div key={index} className="step">
                   {step.type === 'conversion' && (
@@ -420,6 +961,10 @@ const FeistelCipher = () => {
                 <strong>Note:</strong> Decryption uses the same algorithm but with reversed round keys
               </div>
 
+              {/* Render the decryption animation */}
+              {renderDecryptionAnimation()}
+
+              {/* Detailed Steps */}
               {decryptionResult.steps.map((step, index) => (
                 <div key={index} className="step">
                   {step.type === 'conversion' && (
@@ -518,131 +1063,137 @@ const FeistelCipher = () => {
 
         .cipher-container {
           width: 100%;
-          max-width: 500px;
+          max-width: 800px;
         }
 
         .header-card {
-          background-color: #fff;
-          border-radius: 8px;
+          background: linear-gradient(135deg, #6e8efb, #a777e3);
+          color: white;
           padding: 20px;
+          border-radius: 10px;
           margin-bottom: 20px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
           text-align: center;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
 
         .header-card h1 {
-          font-size: 1.5rem;
-          color: #333;
-          margin-bottom: 8px;
-          font-weight: 600;
+          margin: 0;
+          font-size: 24px;
         }
 
         .header-card p {
-          color: #666;
-          font-size: 0.9rem;
+          margin: 10px 0 0;
+          opacity: 0.9;
+          font-size: 14px;
         }
 
         .input-card {
-          background-color: #fff;
-          border-radius: 8px;
+          background: white;
+          border-radius: 10px;
           padding: 20px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
           margin-bottom: 20px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
         .input-group {
-          margin-bottom: 20px;
+          margin-bottom: 15px;
         }
 
         .input-group label {
           display: block;
-          font-weight: 500;
-          color: #444;
-          margin-bottom: 8px;
-          font-size: 0.9rem;
+          margin-bottom: 5px;
+          font-weight: 600;
+          color: #333;
+          font-size: 14px;
         }
 
         .input-group input {
           width: 100%;
-          padding: 10px 12px;
+          padding: 10px;
           border: 1px solid #ddd;
-          border-radius: 6px;
-          font-size: 0.95rem;
-        }
-
-        .input-group input:focus {
-          outline: none;
-          border-color: #007bff;
-          box-shadow: 0 0 0 2px rgba(0,123,255,0.1);
+          border-radius: 5px;
+          font-size: 14px;
         }
 
         .rounds-input {
           display: flex;
           align-items: center;
-          gap: 10px;
         }
 
         .rounds-input input {
           width: 60px;
+          margin-right: 10px;
         }
 
         .rounds-input span {
-          font-size: 0.8rem;
-          color: #777;
+          font-size: 12px;
+          color: #666;
         }
 
         .action-buttons {
           display: flex;
           gap: 10px;
-          margin-top: 25px;
+          margin-top: 20px;
+          flex-wrap: wrap;
         }
 
         .btn {
-          flex: 1;
-          padding: 12px;
-          border-radius: 6px;
-          border: none;
-          font-weight: 500;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
+          gap: 5px;
+          padding: 10px 15px;
+          border: none;
+          border-radius: 5px;
+          font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s ease;
-          font-size: 0.9rem;
+          transition: all 0.2s;
+          font-size: 14px;
+        }
+
+        .btn svg {
+          stroke-width: 2.5;
         }
 
         .encrypt-btn {
-          background-color: #007bff;
+          background-color: #4CAF50;
           color: white;
         }
 
         .encrypt-btn:hover {
-          background-color: #0069d9;
+          background-color: #3e8e41;
         }
 
         .decrypt-btn {
-          background-color: #28a745;
+          background-color: #2196F3;
           color: white;
         }
 
-        .decrypt-btn:hover:not(.disabled) {
-          background-color: #218838;
+        .decrypt-btn:hover {
+          background-color: #0b7dda;
         }
 
         .decrypt-btn.disabled {
-          background-color: #e9ecef;
-          color: #adb5bd;
+          background-color: #cccccc;
           cursor: not-allowed;
         }
 
         .reset-btn {
-          background-color: #6c757d;
+          background-color: #f44336;
           color: white;
         }
 
         .reset-btn:hover {
-          background-color: #5a6268;
+          background-color: #da190b;
+        }
+
+        .control-btn {
+          background-color: #ff9800;
+          color: white;
+        }
+
+        .control-btn:hover {
+          background-color: #e68a00;
         }
 
         .ciphertext-display {
@@ -653,78 +1204,62 @@ const FeistelCipher = () => {
 
         .ciphertext-display label {
           display: block;
-          font-weight: 500;
-          color: #444;
-          margin-bottom: 8px;
-          font-size: 0.9rem;
+          margin-bottom: 5px;
+          font-weight: 600;
+          color: #333;
+          font-size: 14px;
         }
 
-        .ciphertext-display input {
-          width: 100%;
-          padding: 10px 12px;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          font-family: monospace;
-          font-size: 0.9rem;
-          background-color: #f8f9fa;
-        }
-
-        /* Results styling */
         .result-card {
-          background-color: #fff;
-          border-radius: 8px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+          background: white;
+          border-radius: 10px;
+          padding: 20px;
           margin-bottom: 20px;
-          overflow: hidden;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
         .result-header {
-          background-color: #007bff;
-          padding: 15px 20px;
-          color: white;
-        }
-
-        .result-header.decrypt {
-          background-color: #28a745;
+          padding-bottom: 15px;
+          margin-bottom: 15px;
+          border-bottom: 1px solid #eee;
         }
 
         .result-header h2 {
-          font-size: 1.2rem;
-          font-weight: 600;
+          margin: 0;
+          font-size: 20px;
         }
 
-        .result-content {
-          padding: 20px;
+        .result-header.decrypt {
+          border-bottom-color: #2196F3;
         }
 
         .parameters {
-          background-color: #f8f9fa;
-          border-radius: 6px;
+          background: #f9f9f9;
           padding: 15px;
+          border-radius: 5px;
           margin-bottom: 20px;
         }
 
         .parameters h3 {
-          font-size: 1.1rem;
-          margin-bottom: 10px;
-          color: #333;
+          margin-top: 0;
+          font-size: 16px;
+          color: #555;
         }
 
         .param-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          grid-template-columns: 1fr 2fr;
           gap: 10px;
         }
 
         .param-item {
-          background-color: white;
-          padding: 10px;
-          border-radius: 4px;
-          border: 1px solid #eee;
+          display: flex;
+          font-size: 14px;
         }
 
         .param-label {
-          font-weight: 500;
+          font-weight: 600;
+          margin-right: 5px;
           color: #555;
         }
 
@@ -732,111 +1267,328 @@ const FeistelCipher = () => {
           color: #333;
         }
 
-        .step {
-          background-color: #f8f9fa;
-          border-radius: 6px;
+        .animation-container {
+          margin: 20px 0;
           padding: 15px;
-          margin-bottom: 15px;
-          border-left: 4px solid #007bff;
+          background: #f0f4f8;
+          border-radius: 8px;
+          border: 1px solid #ddd;
         }
 
-        .step-content h4 {
-          font-size: 1.1rem;
-          color: #333;
+        .feistel-diagram {
+          position: relative;
+          padding: 20px 0;
+        }
+
+        .plaintext-block, .cipher-block {
+          background: #e3f2fd;
+          border: 1px solid #bbdefb;
+          border-radius: 5px;
+          padding: 10px;
+          margin: 10px auto;
+          max-width: 300px;
+          text-align: center;
+        }
+
+        .block-label {
+          font-weight: 600;
+          font-size: 14px;
+          margin-bottom: 5px;
+          color: #1976d2;
+        }
+
+        .block-content {
+          font-family: monospace;
+          font-size: 12px;
+          word-break: break-all;
+        }
+
+        .split-blocks {
+          margin: 20px 0;
+        }
+
+        .blocks-row {
+          display: flex;
+          justify-content: center;
+          gap: 20px;
           margin-bottom: 10px;
         }
 
-        .binary-output, .split-output, .round-details, .final-output {
-          background-color: white;
-          border-radius: 4px;
-          padding: 12px;
-          border: 1px solid #eee;
-          margin-top: 10px;
+        .left-block {
+          background: #e8f5e9;
+          border: 1px solid #c8e6c9;
         }
 
-        .binary-output div, .split-output div, .round-details div {
-          margin-bottom: 8px;
+        .left-block .block-label {
+          color: #2e7d32;
+        }
+
+        .right-block {
+          background: #fff3e0;
+          border: 1px solid #ffe0b2;
+        }
+
+        .right-block .block-label {
+          color: #e65100;
+        }
+
+        .block {
+          padding: 10px;
+          border-radius: 5px;
+          min-width: 120px;
+          text-align: center;
+        }
+
+        .block.small {
+          min-width: 80px;
+          padding: 5px;
+          font-size: 11px;
+        }
+
+        .animation-arrow {
+          text-align: center;
+          font-size: 20px;
+          color: #666;
+          margin: 5px 0;
+        }
+
+        .animation-arrow.right {
+          display: inline-block;
+          margin: 0 10px;
+        }
+
+        .round-animation {
+          margin: 20px 0;
+          padding: 15px;
+          background: white;
+          border-radius: 8px;
+          border: 1px solid #ddd;
+        }
+
+        .round-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+          padding-bottom: 5px;
+          border-bottom: 1px dashed #ddd;
+        }
+
+        .round-header h4 {
+          margin: 0;
+          font-size: 16px;
+          color: #333;
+        }
+
+        .round-key {
+          font-size: 12px;
+          background: #f5f5f5;
+          padding: 3px 6px;
+          border-radius: 3px;
+        }
+
+        .f-function {
+          background: #f3e5f5;
+          border: 1px solid #ce93d8;
+          border-radius: 5px;
+          padding: 10px;
+          margin: 10px auto;
+          max-width: 200px;
+          text-align: center;
+        }
+
+        .f-label {
+          font-size: 12px;
+          font-weight: 600;
+          color: #7b1fa2;
+          margin-bottom: 5px;
+        }
+
+        .f-output {
+          font-family: monospace;
+          font-size: 12px;
+          word-break: break-all;
+        }
+
+        .f-output.small {
+          font-size: 11px;
+        }
+
+        .xor-operation {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
+          margin: 10px 0;
+          padding: 10px;
+          background: #e1f5fe;
+          border-radius: 5px;
+        }
+
+        .xor-symbol {
+          font-size: 18px;
+          color: #0288d1;
+        }
+
+        .xor-result {
+          background: #e3f2fd;
+          border: 1px solid #bbdefb;
+          border-radius: 5px;
+          padding: 5px 10px;
+          font-family: monospace;
+          font-size: 12px;
+        }
+
+        .block-swap {
+          margin: 20px 0;
+        }
+
+        .final-blocks {
+          margin-top: 30px;
+          text-align: center;
+        }
+
+        .ciphertext-output, .plaintext-output {
+          background: #e3f2fd;
+          border: 1px solid #bbdefb;
+          border-radius: 5px;
+          padding: 10px;
+          margin: 10px auto;
+          max-width: 300px;
+          font-family: monospace;
+        }
+
+        .plaintext-output {
+          background: #e8f5e9;
+          border: 1px solid #c8e6c9;
+        }
+
+        .animation-controls {
+          display: flex;
+          justify-content: center;
+          gap: 10px;
+          margin-top: 20px;
+        }
+
+        .step {
+          margin-bottom: 20px;
+          padding-bottom: 20px;
+          border-bottom: 1px solid #eee;
+        }
+
+        .step:last-child {
+          border-bottom: none;
+        }
+
+        .step h4 {
+          margin-top: 0;
+          margin-bottom: 10px;
+          font-size: 16px;
+          color: #333;
+        }
+
+        .binary-output, .split-output {
+          background: #f5f5f5;
+          padding: 10px;
+          border-radius: 5px;
+          font-family: monospace;
+          font-size: 13px;
+          margin-top: 5px;
+        }
+
+        .split-output {
+          display: flex;
+          gap: 20px;
         }
 
         .split-output div {
-          display: flex;
-          gap: 10px;
-          align-items: center;
+          flex: 1;
+        }
+
+        .round-details {
+          background: #f5f5f5;
+          padding: 10px;
+          border-radius: 5px;
+          font-size: 14px;
         }
 
         .round-details div {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 5px;
-          align-items: center;
+          margin-bottom: 5px;
         }
 
         .indent {
           margin-left: 20px;
-          margin-top: 5px;
+        }
+
+        .highlight {
+          background: #fff9c4;
+          padding: 2px 4px;
+          border-radius: 3px;
+        }
+
+        .final-output {
+          background: #f5f5f5;
+          padding: 15px;
+          border-radius: 5px;
+        }
+
+        .text-output {
+          margin-top: 10px;
+          font-size: 14px;
+        }
+
+        .verification {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          margin-top: 10px;
+          padding: 8px;
+          border-radius: 5px;
+          font-size: 14px;
+        }
+
+        .verification.success {
+          background: #e8f5e9;
+          color: #2e7d32;
+        }
+
+        .verification.error {
+          background: #ffebee;
+          color: #c62828;
+        }
+
+        .note {
+          background: #fff8e1;
+          padding: 10px;
+          border-radius: 5px;
+          margin-bottom: 15px;
+          font-size: 14px;
         }
 
         code {
           font-family: 'Courier New', Courier, monospace;
-          background-color: #f1f1f1;
+          background: rgba(0,0,0,0.05);
           padding: 2px 4px;
           border-radius: 3px;
-          font-size: 0.9rem;
         }
 
-        .highlight {
-          background-color: #e7f5ff;
-          color: #0056b3;
-          font-weight: 500;
-        }
+        @media (max-width: 768px) {
+          .blocks-row {
+            flex-direction: column;
+            gap: 10px;
+          }
 
-        .text-output {
-          margin-top: 15px;
-        }
+          .param-grid {
+            grid-template-columns: 1fr;
+          }
 
-        .text-output strong {
-          display: inline-block;
-          margin-top: 5px;
-          font-size: 1.1rem;
-          color: #0056b3;
-        }
-
-        .verification {
-          padding: 10px;
-          border-radius: 4px;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-top: 15px;
-          font-size: 0.9rem;
-        }
-
-        .verification.success {
-          background-color: #e6ffed;
-          color: #28a745;
-        }
-
-        .verification.error {
-          background-color: #ffecec;
-          color: #dc3545;
-        }
-
-        .note {
-          background-color: #e7f5ff;
-          color: #0056b3;
-          padding: 10px;
-          border-radius: 4px;
-          margin-bottom: 20px;
-          font-size: 0.9rem;
-        }
-
-        @media (max-width: 480px) {
           .action-buttons {
             flex-direction: column;
           }
-          
-          .param-grid {
-            grid-template-columns: 1fr;
+
+          .split-output {
+            flex-direction: column;
+            gap: 10px;
           }
         }
       `}</style>
