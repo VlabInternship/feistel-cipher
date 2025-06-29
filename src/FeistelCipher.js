@@ -287,7 +287,7 @@ const FeistelCipher = () => {
 
   useEffect(() => {
     if (isAnimating && encryptionResult) {
-      const totalSteps = rounds * 4 + 2; // 4 steps per round + initial + final
+      const totalSteps = rounds + 2; // Initial + rounds + final
       let currentStep = 0;
 
       const animate = () => {
@@ -297,30 +297,18 @@ const FeistelCipher = () => {
         }
 
         if (currentStep === 0) {
-          // Initial conversion step
-          setAnimationStep(1);
+          // Initial step
           setActiveRound(0);
-        } else if (currentStep === 1) {
-          // Split step
-          setAnimationStep(1);
-          setActiveRound(0);
-        } else {
+        } else if (currentStep <= rounds) {
           // Round steps
-          const round = Math.ceil((currentStep - 1) / 4);
-          const stepInRound = (currentStep - 1) % 4;
-          
-          if (round <= rounds) {
-            setActiveRound(round);
-            setAnimationStep(stepInRound + 1);
-          } else {
-            // Final step
-            setActiveRound(rounds + 1);
-            setAnimationStep(1);
-          }
+          setActiveRound(currentStep);
+        } else {
+          // Final step
+          setActiveRound(rounds + 1);
         }
 
         currentStep++;
-        setTimeout(animate, 1500);
+        setTimeout(animate, 2000);
       };
 
       animate();
@@ -329,7 +317,7 @@ const FeistelCipher = () => {
 
   useEffect(() => {
     if (isAnimating && decryptionResult) {
-      const totalSteps = rounds * 4 + 2; // 4 steps per round + initial + final
+      const totalSteps = rounds + 2; // Initial + rounds + final
       let currentStep = 0;
 
       const animate = () => {
@@ -339,30 +327,18 @@ const FeistelCipher = () => {
         }
 
         if (currentStep === 0) {
-          // Initial conversion step
-          setAnimationStep(1);
+          // Initial step
           setActiveRound(0);
-        } else if (currentStep === 1) {
-          // Split step
-          setAnimationStep(1);
-          setActiveRound(0);
-        } else {
+        } else if (currentStep <= rounds) {
           // Round steps
-          const round = Math.ceil((currentStep - 1) / 4);
-          const stepInRound = (currentStep - 1) % 4;
-          
-          if (round <= rounds) {
-            setActiveRound(round);
-            setAnimationStep(stepInRound + 1);
-          } else {
-            // Final step
-            setActiveRound(rounds + 1);
-            setAnimationStep(1);
-          }
+          setActiveRound(currentStep);
+        } else {
+          // Final step
+          setActiveRound(rounds + 1);
         }
 
         currentStep++;
-        setTimeout(animate, 1500);
+        setTimeout(animate, 2000);
       };
 
       animate();
@@ -432,140 +408,83 @@ const FeistelCipher = () => {
         <div className="animation-header">
           <h3>Encryption Process</h3>
           <div className="step-indicator">
-            {activeRound === 0 && animationStep === 1 && "Converting plaintext to binary"}
-            {activeRound === 0 && animationStep === 2 && "Splitting into blocks"}
-            {activeRound > 0 && activeRound <= rounds && animationStep === 1 && `Round ${activeRound}: Preparing`}
-            {activeRound > 0 && activeRound <= rounds && animationStep === 2 && `Round ${activeRound}: F-function`}
-            {activeRound > 0 && activeRound <= rounds && animationStep === 3 && `Round ${activeRound}: XOR`}
-            {activeRound > 0 && activeRound <= rounds && animationStep === 4 && `Round ${activeRound}: Swap`}
-            {activeRound > rounds && "Final ciphertext"}
+            {activeRound === 0 && "Initial Plaintext"}
+            {activeRound > 0 && activeRound <= rounds && `Round ${activeRound}`}
+            {activeRound > rounds && "Final Ciphertext"}
           </div>
         </div>
 
         <div className="feistel-diagram">
           {/* Initial Plaintext Block */}
-          {(activeRound === 0 && animationStep <= 2) && (
+          {activeRound === 0 && (
             <motion.div 
               className="plaintext-block"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
             >
-              <div className="block-label">Plaintext</div>
+              <div className="block-label">Plaintext Block</div>
               <div className="block-content">{plaintext}</div>
-              <motion.div 
-                className="animation-arrow down"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                ↓
-              </motion.div>
-            </motion.div>
-          )}
-
-          {/* Split into L0 and R0 */}
-          {(activeRound === 0 && animationStep >= 2) && (
-            <motion.div
-              className="split-blocks"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="blocks-row">
-                <div className="block left-block">
-                  <div className="block-label">L<sub>0</sub></div>
-                  <div className="block-content">{splitStep.data.L0}</div>
-                </div>
-                <div className="block right-block">
-                  <div className="block-label">R<sub>0</sub></div>
-                  <div className="block-content">{splitStep.data.R0}</div>
-                </div>
-              </div>
-              {renderRoundValidation(splitStep)}
             </motion.div>
           )}
 
           {/* Round Animations */}
-          <AnimatePresence>
-            {roundSteps.map((round, index) => (
-              <React.Fragment key={`round-${index}`}>
-                {(activeRound === index + 1) && (
-                  <motion.div
-                    className="round-animation"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <div className="round-header">
-                      <h4>Round {index + 1}</h4>
+          {activeRound > 0 && activeRound <= rounds && (
+            <motion.div
+              className="round-animation"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="feistel-round-diagram">
+                <div className="round-header">
+                  <h4>Round {activeRound}</h4>
+                </div>
+
+                <div className="round-content">
+                  <div className="left-block">
+                    <div className="block-label">L<sub>{activeRound-1}</sub></div>
+                    <div className="block-content">
+                      {roundSteps[activeRound-1].data.prevLeft}
                     </div>
+                  </div>
 
-                    <div className="round-steps">
-                      {/* F Function */}
-                      {animationStep >= 2 && (
-                        <motion.div
-                          className="step-container"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                        >
-                          <div className="step-content">
-                            <motion.div
-                              className="f-function"
-                              initial={{ scale: 0.8 }}
-                              animate={{ scale: 1 }}
-                              transition={{ duration: 0.5 }}
-                            >
-                              <div className="f-output">{round.data.fOutput}</div>
-                            </motion.div>
-                          </div>
-                        </motion.div>
-                      )}
-
-                      {/* XOR Operation */}
-                      {animationStep >= 3 && (
-                        <motion.div
-                          className="step-container"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                        >
-                          <div className="step-content">
-                            <div className="xor-result">
-                              <div className="block-label">R<sub>{index + 1}</sub></div>
-                              <div className="block-content">{round.data.newRight}</div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-
-                      {/* Block Swap */}
-                      {animationStep >= 4 && (
-                        <motion.div
-                          className="step-container"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                        >
-                          <div className="step-content">
-                            <div className="blocks-row">
-                              <div className="block left-block">
-                                <div className="block-label">L<sub>{index + 1}</sub></div>
-                                <div className="block-content">{round.data.newLeft}</div>
-                              </div>
-                              <div className="block right-block">
-                                <div className="block-label">R<sub>{index + 1}</sub></div>
-                                <div className="block-content">{round.data.newRight}</div>
-                              </div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
+                  <div className="right-block">
+                    <div className="block-label">R<sub>{activeRound-1}</sub></div>
+                    <div className="block-content">
+                      {roundSteps[activeRound-1].data.prevRight}
                     </div>
-                  </motion.div>
-                )}
-              </React.Fragment>
-            ))}
-          </AnimatePresence>
+                  </div>
+
+                  <div className="f-function-block">
+                    <div className="f-function-label">F(K,R)</div>
+                    <div className="f-function-content">
+                      {roundSteps[activeRound-1].data.fOutput}
+                    </div>
+                    <div className="round-key">
+                      K<sub>{activeRound}</sub>: {roundSteps[activeRound-1].data.roundKey}
+                    </div>
+                  </div>
+
+                  <div className="xor-arrow">⊕</div>
+
+                  <div className="next-left-block">
+                    <div className="block-label">L<sub>{activeRound}</sub></div>
+                    <div className="block-content">
+                      {roundSteps[activeRound-1].data.newLeft}
+                    </div>
+                  </div>
+
+                  <div className="next-right-block">
+                    <div className="block-label">R<sub>{activeRound}</sub></div>
+                    <div className="block-content">
+                      {roundSteps[activeRound-1].data.newRight}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
           {/* Final Ciphertext */}
           {activeRound > rounds && (
@@ -576,11 +495,8 @@ const FeistelCipher = () => {
               transition={{ duration: 0.5 }}
             >
               <div className="final-step">
-                <div className="step-content">
-                  <div className="ciphertext-output">
-                    <strong>Ciphertext:</strong> {finalStep.data.ciphertext}
-                  </div>
-                </div>
+                <div className="block-label">Ciphertext Block</div>
+                <div className="block-content">{finalStep.data.ciphertext}</div>
               </div>
             </motion.div>
           )}
@@ -602,140 +518,83 @@ const FeistelCipher = () => {
         <div className="animation-header">
           <h3>Decryption Process</h3>
           <div className="step-indicator">
-            {activeRound === 0 && animationStep === 1 && "Converting ciphertext to binary"}
-            {activeRound === 0 && animationStep === 2 && "Splitting into blocks"}
-            {activeRound > 0 && activeRound <= rounds && animationStep === 1 && `Round ${activeRound}: Preparing`}
-            {activeRound > 0 && activeRound <= rounds && animationStep === 2 && `Round ${activeRound}: F-function`}
-            {activeRound > 0 && activeRound <= rounds && animationStep === 3 && `Round ${activeRound}: XOR`}
-            {activeRound > 0 && activeRound <= rounds && animationStep === 4 && `Round ${activeRound}: Swap`}
-            {activeRound > rounds && "Final plaintext"}
+            {activeRound === 0 && "Initial Ciphertext"}
+            {activeRound > 0 && activeRound <= rounds && `Round ${activeRound}`}
+            {activeRound > rounds && "Final Plaintext"}
           </div>
         </div>
 
         <div className="feistel-diagram decrypt">
           {/* Initial Ciphertext Block */}
-          {(activeRound === 0 && animationStep <= 2) && (
+          {activeRound === 0 && (
             <motion.div 
               className="plaintext-block"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
             >
-              <div className="block-label">Ciphertext</div>
+              <div className="block-label">Ciphertext Block</div>
               <div className="block-content">{ciphertext}</div>
-              <motion.div 
-                className="animation-arrow down"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                ↓
-              </motion.div>
-            </motion.div>
-          )}
-
-          {/* Split into L0 and R0 */}
-          {(activeRound === 0 && animationStep >= 2) && (
-            <motion.div
-              className="split-blocks"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="blocks-row">
-                <div className="block left-block">
-                  <div className="block-label">L<sub>0</sub></div>
-                  <div className="block-content">{splitStep.data.L0}</div>
-                </div>
-                <div className="block right-block">
-                  <div className="block-label">R<sub>0</sub></div>
-                  <div className="block-content">{splitStep.data.R0}</div>
-                </div>
-              </div>
-              {renderRoundValidation(splitStep)}
             </motion.div>
           )}
 
           {/* Round Animations */}
-          <AnimatePresence>
-            {roundSteps.map((round, index) => (
-              <React.Fragment key={`decrypt-round-${index}`}>
-                {(activeRound === index + 1) && (
-                  <motion.div
-                    className="round-animation"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <div className="round-header">
-                      <h4>Round {index + 1}</h4>
+          {activeRound > 0 && activeRound <= rounds && (
+            <motion.div
+              className="round-animation"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="feistel-round-diagram">
+                <div className="round-header">
+                  <h4>Round {activeRound}</h4>
+                </div>
+
+                <div className="round-content">
+                  <div className="left-block">
+                    <div className="block-label">L<sub>{activeRound-1}</sub></div>
+                    <div className="block-content">
+                      {roundSteps[activeRound-1].data.prevLeft}
                     </div>
+                  </div>
 
-                    <div className="round-steps">
-                      {/* F Function */}
-                      {animationStep >= 2 && (
-                        <motion.div
-                          className="step-container"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                        >
-                          <div className="step-content">
-                            <motion.div
-                              className="f-function"
-                              initial={{ scale: 0.8 }}
-                              animate={{ scale: 1 }}
-                              transition={{ duration: 0.5 }}
-                            >
-                              <div className="f-output">{round.data.fOutput}</div>
-                            </motion.div>
-                          </div>
-                        </motion.div>
-                      )}
-
-                      {/* XOR Operation */}
-                      {animationStep >= 3 && (
-                        <motion.div
-                          className="step-container"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                        >
-                          <div className="step-content">
-                            <div className="xor-result">
-                              <div className="block-label">L<sub>{index + 1}</sub></div>
-                              <div className="block-content">{round.data.newLeft}</div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-
-                      {/* Block Swap */}
-                      {animationStep >= 4 && (
-                        <motion.div
-                          className="step-container"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                        >
-                          <div className="step-content">
-                            <div className="blocks-row">
-                              <div className="block left-block">
-                                <div className="block-label">L<sub>{index + 1}</sub></div>
-                                <div className="block-content">{round.data.newLeft}</div>
-                              </div>
-                              <div className="block right-block">
-                                <div className="block-label">R<sub>{index + 1}</sub></div>
-                                <div className="block-content">{round.data.newRight}</div>
-                              </div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
+                  <div className="right-block">
+                    <div className="block-label">R<sub>{activeRound-1}</sub></div>
+                    <div className="block-content">
+                      {roundSteps[activeRound-1].data.prevRight}
                     </div>
-                  </motion.div>
-                )}
-              </React.Fragment>
-            ))}
-          </AnimatePresence>
+                  </div>
+
+                  <div className="f-function-block">
+                    <div className="f-function-label">F(K,L)</div>
+                    <div className="f-function-content">
+                      {roundSteps[activeRound-1].data.fOutput}
+                    </div>
+                    <div className="round-key">
+                      K<sub>{rounds - activeRound + 1}</sub>: {roundSteps[activeRound-1].data.roundKey}
+                    </div>
+                  </div>
+
+                  <div className="xor-arrow">⊕</div>
+
+                  <div className="next-left-block">
+                    <div className="block-label">L<sub>{activeRound}</sub></div>
+                    <div className="block-content">
+                      {roundSteps[activeRound-1].data.newLeft}
+                    </div>
+                  </div>
+
+                  <div className="next-right-block">
+                    <div className="block-label">R<sub>{activeRound}</sub></div>
+                    <div className="block-content">
+                      {roundSteps[activeRound-1].data.newRight}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
           {/* Final Plaintext */}
           {activeRound > rounds && (
@@ -746,11 +605,8 @@ const FeistelCipher = () => {
               transition={{ duration: 0.5 }}
             >
               <div className="final-step">
-                <div className="step-content">
-                  <div className="plaintext-output">
-                    <strong>Decrypted Text:</strong> {finalStep.data.decryptedText}
-                  </div>
-                </div>
+                <div className="block-label">Plaintext Block</div>
+                <div className="block-content">{finalStep.data.decryptedText}</div>
               </div>
             </motion.div>
           )}
@@ -992,7 +848,7 @@ const FeistelCipher = () => {
           min-height: 300px;
         }
         
-        .plaintext-block, .split-blocks, .round-animation, .final-blocks {
+        .plaintext-block, .round-animation, .final-blocks {
           background: #f8f9fa;
           border-radius: 6px;
           padding: 15px;
@@ -1015,75 +871,101 @@ const FeistelCipher = () => {
           word-break: break-all;
         }
         
-        .blocks-row {
-          display: flex;
-          gap: 15px;
-          margin-bottom: 10px;
-        }
-        
-        .left-block, .right-block {
-          flex: 1;
-        }
-        
-        .left-block {
-          border-left: 4px solid #3498db;
-        }
-        
-        .right-block {
-          border-left: 4px solid #e74c3c;
-        }
-        
-        .animation-arrow {
-          text-align: center;
-          font-size: 20px;
-          color: #6c757d;
-          margin: 10px 0;
-        }
-        
-        .round-header {
-          margin-bottom: 15px;
-        }
-        
-        .round-header h4 {
-          margin: 0;
-          color: #2c3e50;
-        }
-        
-        .round-steps {
+        .feistel-round-diagram {
           display: flex;
           flex-direction: column;
           gap: 15px;
         }
-        
-        .step-container {
-          background: white;
-          border-radius: 6px;
-          padding: 10px;
-          border: 1px solid #dee2e6;
+
+        .round-content {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          grid-template-rows: auto auto auto;
+          gap: 15px;
+          position: relative;
         }
-        
-        .f-function {
-          background: #e9ecef;
+
+        .left-block, .right-block {
           padding: 10px;
+          border-radius: 4px;
+          border: 1px solid #dee2e6;
+          background: #f8f9fa;
+        }
+
+        .left-block {
+          grid-column: 1;
+          grid-row: 1;
+          border-left: 4px solid #3498db;
+        }
+
+        .right-block {
+          grid-column: 2;
+          grid-row: 1;
+          border-left: 4px solid #e74c3c;
+        }
+
+        .f-function-block {
+          grid-column: 2;
+          grid-row: 2;
+          padding: 10px;
+          background: #e9ecef;
           border-radius: 4px;
           text-align: center;
-          font-family: 'Courier New', Courier, monospace;
+          position: relative;
         }
-        
-        .xor-result {
+
+        .f-function-label {
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+
+        .f-function-content {
+          font-family: 'Courier New', Courier, monospace;
+          background: white;
+          padding: 5px;
+          border-radius: 3px;
+          margin-bottom: 5px;
+        }
+
+        .round-key {
+          font-size: 0.9em;
+          color: #6c757d;
+        }
+
+        .xor-arrow {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          font-size: 24px;
+          background: white;
+          width: 30px;
+          height: 30px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          border: 1px solid #dee2e6;
+          z-index: 2;
+        }
+
+        .next-left-block, .next-right-block {
           padding: 10px;
-          background: #e9ecef;
           border-radius: 4px;
-          font-family: 'Courier New', Courier, monospace;
+          border: 1px solid #dee2e6;
+          background: #e8f5e9;
         }
-        
-        .ciphertext-output, .plaintext-output {
-          font-family: 'Courier New', Courier, monospace;
-          padding: 10px;
-          background: #e9ecef;
-          border-radius: 4px;
+
+        .next-left-block {
+          grid-column: 1;
+          grid-row: 3;
         }
-        
+
+        .next-right-block {
+          grid-column: 2;
+          grid-row: 3;
+        }
+
         .validation-success, .validation-error {
           display: flex;
           align-items: center;
